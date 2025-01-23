@@ -140,17 +140,89 @@
     (asserts! (>= seller-credits amount) err-not-enough-balance)
     (asserts! (>= buyer-balance total-cost) err-not-enough-balance)
     
-    ;; Update seller's credit balance and for-sale amount
-    (map-set user-credit-balance seller (- seller-credits amount))
-    (map-set credits-for-sale {user: seller} 
-             {amount: (- (get amount sale-data) amount), price: (get price sale-data)})
+;; Update seller's credit balance and for-sale amount
+(map-set user-credit-balance seller (- seller-credits amount))
+(map-set credits-for-sale {user: seller} 
+            {amount: (- (get amount sale-data) amount), price: (get price sale-data)})
+
+;; Update buyer's STX and credit balance
+(map-set user-stx-balance tx-sender (- buyer-balance total-cost))
+(map-set user-credit-balance tx-sender (+ (default-to u0 (map-get? user-credit-balance tx-sender)) amount))
+
+;; Update seller's and contract owner's STX balance
+(map-set user-stx-balance seller (+ seller-balance credit-cost))
+(map-set user-stx-balance contract-owner (+ owner-balance verification-fee))
+
+(ok true)))
+
+;; Redeem credits
+(define-public (redeem-credits (amount uint))
+  (let (
+    (user-credits (default-to u0 (map-get? user-credit-balance tx-sender)))
+    (redemption-amount (calculate-redemption amount))
+    (contract-stx-balance (default-to u0 (map-get? user-stx-balance contract-owner)))
+  )
+    (asserts! (> amount u0) err-invalid-amount)
+    (asserts! (>= user-credits amount) err-not-enough-balance)
+    (asserts! (>= contract-stx-balance redemption-amount) err-refund-failed)
     
-    ;; Update buyer's STX and credit balance
-    (map-set user-stx-balance tx-sender (- buyer-balance total-cost))
-    (map-set user-credit-balance tx-sender (+ (default-to u0 (map-get? user-credit-balance tx-sender)) amount))
+    ;; Update user's credit balance
+    (map-set user-credit-balance tx-sender (- user-credits amount))
     
-    ;; Update seller's and contract owner's STX balance
-    (map-set user-stx-balance seller (+ seller-balance credit-cost))
-    (map-set user-stx-balance contract-owner (+ owner-balance verification-fee))
+    ;; Update user's and contract's STX balance
+    (map-set user-stx-balance tx-sender (+ (default-to u0 (map-get? user-stx-balance tx-sender)) redemption-amount))
+    (map-set user-stx-balance contract-owner (- contract-stx-balance redemption-amount))
     
+    ;; Add redeemed credits back to contract owner's balance
+    (map-set user-credit-balance contract-owner (+ (default-to u0 (map-get? user-credit-balance contract-owner)) amount))
+    
+    ;; Update credit reserve
+    (try! (update-credit-reserve (to-int (- amount))))
+    
+    (ok true)))
+
+;; Read-only functions
+
+;; Get current carbon credit price
+(define-read-only (get-carbon-credit-price)
+  (ok (var-get carbon-credit-price)))
+
+;; Get current verification fee
+(define-read-only (get-verification-rate)
+  (ok (var-get verification-rate)))
+
+;; Get current redemption rate
+(define-read-only (get-redemption-rate)
+  (ok (var-get redemption-rate)))
+
+;; Get user's credit balance
+(define-read-only (get-credit-balance (user principal))
+  (ok (default-to u0 (map-get? user-credit-balance user))))
+
+;; Get user's STX balance
+(define-read-only (get-stx-balance (user principal))
+  (ok (default-to u0 (map-get? user-stx-balance user))))
+
+;; Get credits for sale by user
+(define-read-only (get-credits-for-sale (user principal))
+  (ok (default-to {amount: u0, price: u0} (map-get? credits-for-sale {user: user}))))
+
+;; Get maximum credits per user
+(define-read-only (get-max-credits-per-user)
+  (ok (var-get max-credits-per-user)))
+
+;; Get current credit reserve
+(define-read-only (get-current-credit-reserve)
+  (ok (var-get current-credit-reserve)))
+
+;; Get credit reserve limit
+(define-read-only (get-credit-reserve-limit)
+  (ok (var-get credit-reserve-limit)))
+
+;; Set maximum credits per user (only contract owner)
+(define-public (set-max-credits-per-user (new-max uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (> new-max u0) err-invalid-amount)
+    (var-set max-credits-per-user new-max)
     (ok true)))
