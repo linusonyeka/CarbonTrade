@@ -1,14 +1,19 @@
 # CarbonTrade Smart Contract
 
-A decentralized carbon credit trading platform built on Stacks blockchain.
+A decentralized carbon credit trading platform built on Stacks blockchain that enables efficient, transparent trading of carbon credits with automated verification and redemption mechanisms.
 
-## Features
+## Overview
 
-- Buy and sell carbon credits
-- Automated verification system
-- Credit redemption mechanism
+This smart contract facilitates peer-to-peer trading of carbon credits while maintaining market integrity through automated verification, dynamic pricing, and reserve management. It provides a trustless environment for carbon credit transactions with built-in safety measures.
+
+## Key Benefits
+
+- Transparent carbon credit trading
+- Automated verification and settlement
+- Dynamic market pricing
+- Secure ownership tracking
 - Reserve limit management
-- Dynamic pricing system
+- Efficient redemption process
 
 ## Contract Variables
 
@@ -17,53 +22,93 @@ A decentralized carbon credit trading platform built on Stacks blockchain.
 - `verification-rate`: Fee for transaction verification (10%)
 - `redemption-rate`: Rate for credit redemption (85%)
 - `credit-reserve-limit`: Global credit cap (5,000,000)
+- `current-credit-reserve`: Current total credits in system
 
-## Functions
+## Core Functions
 
-### Public Functions
+### Trading Functions
+- `add-credits-for-sale(amount, price)`: List credits for sale
+- `buy-credits-from-user(seller, amount)`: Purchase credits from another user
+- `remove-credits-from-sale(amount)`: Remove listed credits from market
+- `redeem-credits(amount)`: Convert credits back to STX at current redemption rate
 
-- `add-credits-for-sale`: List credits for sale
-- `buy-credits-from-user`: Purchase credits
-- `redeem-credits`: Redeem credits for STX
-- `remove-credits-from-sale`: Delist credits
+### Administrative Functions
+- `set-carbon-credit-price(new-price)`: Update base credit price
+- `set-verification-rate(new-rate)`: Modify verification fee percentage
+- `set-redemption-rate(new-rate)`: Adjust credit redemption rate
+- `set-credit-reserve-limit(new-limit)`: Update global credit cap
+- `set-max-credits-per-user(new-max)`: Change per-user credit limit
 
-### Admin Functions
+### Query Functions
+- `get-carbon-credit-price()`: Current credit price
+- `get-credit-balance(user)`: User's credit holdings
+- `get-credits-for-sale(user)`: Listed credits by user
+- `get-current-credit-reserve()`: Total system credits
+- `get-verification-rate()`: Current verification fee
+- `get-redemption-rate()`: Current redemption rate
+- `get-credit-reserve-limit()`: Global credit cap
+- `get-max-credits-per-user()`: Per-user credit limit
+- `get-stx-balance(user)`: User's STX balance
 
-- `set-carbon-credit-price`: Update base price
-- `set-verification-rate`: Modify verification fee
-- `set-redemption-rate`: Adjust redemption rate
-- `set-credit-reserve-limit`: Change global cap
-- `set-max-credits-per-user`: Update per-user limit
+## Error Handling
 
-### Read-Only Functions
-
-- `get-carbon-credit-price`: Current price
-- `get-credit-balance`: User balance
-- `get-credits-for-sale`: Listed credits
-- `get-current-credit-reserve`: Total credits in system
-
-## Error Codes
-
-- `100`: Not owner
+### Transaction Errors
+- `100`: Unauthorized (not owner)
 - `101`: Insufficient balance
 - `102`: Transfer failed
 - `103`: Invalid price
 - `104`: Invalid amount
-- `105`: Invalid fee
-- `106`: Refund failed
-- `107`: Same user
-- `108`: Reserve limit exceeded
+- `105`: Invalid fee percentage
+- `106`: Redemption failed
+- `107`: Self-trading attempt
+- `108`: Reserve limit breach
 - `109`: Invalid reserve limit
 
-## Usage
+## Security Features
 
-1. Deploy contract to Stacks blockchain
-2. Initialize pricing parameters
-3. Users can then buy, sell, and redeem credits
+1. **Access Control**
+   - Owner-only administrative functions
+   - Protected critical parameters
 
-## Security
+2. **Transaction Safety**
+   - Balance verification before trades
+   - Reserve limit enforcement
+   - Automated verification system
 
-- Owner-only administrative functions
-- Balance checks before transactions
-- Reserve limit enforcement
-- Transaction verification system
+3. **Market Integrity**
+   - Dynamic pricing mechanism
+   - Self-trade prevention
+   - Reserve management
+
+## Implementation Guide
+
+1. **Deployment**
+   ```bash
+   clarinet contract deploy carbon-trade
+   ```
+
+2. **Initial Setup**
+   - Set base credit price
+   - Configure verification rate
+   - Set redemption rate
+   - Establish reserve limits
+
+3. **Trading Operation**
+   - Users list credits for sale
+   - Buyers purchase with STX
+   - Automatic verification fee collection
+   - Redemption available at current rates
+
+## Best Practices
+
+1. **For Traders**
+   - Verify credit balance before listing
+   - Check current market prices
+   - Monitor verification fees
+   - Understand redemption rates
+
+2. **For Administrators**
+   - Regular market parameter reviews
+   - Monitor reserve limits
+   - Adjust rates based on market conditions
+   - Maintain reasonable fee structures
