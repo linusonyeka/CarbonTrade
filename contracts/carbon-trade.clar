@@ -109,3 +109,48 @@
              {amount: (- current-for-sale amount), 
               price: (get price (default-to {amount: u0, price: u0} (map-get? credits-for-sale {user: tx-sender})))})
     (ok true)))
+
+;; Remove credits from sale
+(define-public (remove-credits-from-sale (amount uint))
+  (let (
+    (current-for-sale (get amount (default-to {amount: u0, price: u0} (map-get? credits-for-sale {user: tx-sender}))))
+  )
+    (asserts! (>= current-for-sale amount) err-not-enough-balance)
+    (try! (update-credit-reserve (to-int (- amount))))
+    (map-set credits-for-sale {user: tx-sender} 
+             {amount: (- current-for-sale amount), 
+              price: (get price (default-to {amount: u0, price: u0} (map-get? credits-for-sale {user: tx-sender})))})
+    (ok true)))
+
+;; Buy credits from user
+(define-public (buy-credits-from-user (seller principal) (amount uint))
+  (let (
+    (sale-data (default-to {amount: u0, price: u0} (map-get? credits-for-sale {user: seller})))
+    (credit-cost (* amount (get price sale-data)))
+    (verification-fee (calculate-credit-verification-fee credit-cost))
+    (total-cost (+ credit-cost verification-fee))
+    (seller-credits (default-to u0 (map-get? user-credit-balance seller)))
+    (buyer-balance (default-to u0 (map-get? user-stx-balance tx-sender)))
+    (seller-balance (default-to u0 (map-get? user-stx-balance seller)))
+    (owner-balance (default-to u0 (map-get? user-stx-balance contract-owner)))
+  )
+    (asserts! (not (is-eq tx-sender seller)) err-same-user)
+    (asserts! (> amount u0) err-invalid-amount)
+    (asserts! (>= (get amount sale-data) amount) err-not-enough-balance)
+    (asserts! (>= seller-credits amount) err-not-enough-balance)
+    (asserts! (>= buyer-balance total-cost) err-not-enough-balance)
+    
+    ;; Update seller's credit balance and for-sale amount
+    (map-set user-credit-balance seller (- seller-credits amount))
+    (map-set credits-for-sale {user: seller} 
+             {amount: (- (get amount sale-data) amount), price: (get price sale-data)})
+    
+    ;; Update buyer's STX and credit balance
+    (map-set user-stx-balance tx-sender (- buyer-balance total-cost))
+    (map-set user-credit-balance tx-sender (+ (default-to u0 (map-get? user-credit-balance tx-sender)) amount))
+    
+    ;; Update seller's and contract owner's STX balance
+    (map-set user-stx-balance seller (+ seller-balance credit-cost))
+    (map-set user-stx-balance contract-owner (+ owner-balance verification-fee))
+    
+    (ok true)))
